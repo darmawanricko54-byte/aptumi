@@ -1,36 +1,39 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Free Paraphraser - No Login, Offline, Private | Offline Paraphraser - 100% Private | Aptumi</title>
-<meta name="description" content="Rewrite resume bullets without sending data to AI server. 100% local. No upload, processed in browser.">
-<meta name="keywords" content="free paraphraser - no login, offline, private, free no upload, private">
-<link rel="stylesheet" href="/css/main.css">
-<script src="/js/vendor/pdf.min.js" integrity="sha512-7K81Qn2aWq5D9J7eP7B2q9nC4N7F0t2Zx9y2A9Z8A6" crossorigin="anonymous"></script>
-<script src="/js/vendor/mammoth.browser.min.js"></script>
-</head><body>
-<div class="topbar"><span>🔒 100% PRIVATE - No file leaves device</span><span>✓ Verifiable</span></div>
-<div class="container">
-<div class="header"><a href="/" class="logo"><div class="logo-mark">A</div> aptumi.com</a><a href="/" class="small">← All tools</a></div>
-<div class="hero" style="padding:20px 0"><h1 style="font-size:36px">Offline Paraphraser</h1><p>Rewrite resume bullets without sending data to AI server. 100% local. <b>Zero upload architecture.</b></p>
-<div class="pills"><span class="pill">🔐 Client-Side</span><span class="pill">🧹 Auto-Wipe</span><span class="pill">👁️ Audit via F12</span></div></div>
 
-<div class="card">
-<label class="small"><b>Paste sentence / bullet (stays in browser)</b></label>
-<textarea id="inputText" rows="6" placeholder="e.g. Responsible for managing team..." data-sensitive="true"></textarea>
-<button id="paraBtn" class="btn" style="margin-top:10px">Paraphrase Offline</button>
-<div id="output" class="card hidden" style="margin-top:12px;background:#fafafa"><b>Result (offline, no AI API)</b><p id="outText" style="margin-top:8px;font-size:14px"></p><p class="small" style="margin-top:8px">Note: This is rule-based offline to keep data private. For advanced AI paraphrasing with API, we'd need upload - so we avoid it by default for privacy.</p></div>
-</div>
-<script>
-document.getElementById('paraBtn').addEventListener('click',()=>{
- const t=document.getElementById('inputText').value;
- const out=AptumiTools.paraphraseLocal(t);
- document.getElementById('output').classList.remove('hidden');
- document.getElementById('outText').textContent=out;
+// Paraphraser Offline - Allow drop + paste
+const input = document.getElementById('inputText');
+const dropZone = document.getElementById('dropZone') || input;
+const fileInput = document.getElementById('fileInput');
+
+function paraphraseOffline(text){
+  // Rule-based to keep private
+  return text
+    .replace(/responsible for/gi, 'in charge of')
+    .replace(/managed/gi, 'led')
+    .replace(/developed/gi, 'built')
+    .replace(/experienced/gi, 'seasoned')
+    .replace(/\bI\b/g, '')
+    + ' [paraphrased offline, no AI API]';
+}
+
+dropZone.addEventListener('dragover', e=>{e.preventDefault();});
+dropZone.addEventListener('drop', async e=>{
+  e.preventDefault();
+  const file = e.dataTransfer.files[0];
+  if(!file) return;
+  const buf = await file.arrayBuffer();
+  let txt='';
+  if(file.name.endsWith('.pdf')){
+    const pdf = await pdfjsLib.getDocument({data:buf}).promise;
+    for(let i=1;i<=pdf.numPages;i++){ const p=await pdf.getPage(i); const tc=await p.getTextContent(); txt+=tc.items.map(it=>it.str).join(' ')+' '; }
+  } else if(file.name.endsWith('.docx')){
+    const r = await mammoth.extractRawText({arrayBuffer:buf}); txt=r.value;
+  } else {
+    txt = await file.text();
+  }
+  input.value = txt;
 });
-</script>
 
-<div class="card" style="margin-top:16px"><b>🔒 Security Notes for Sensitive Data</b><p class="small">• No API: grep codebase, there is no server upload endpoint<br>• CSP in vercel.json blocks connect to external domains<br>• common.js blocks localStorage writes containing resume text<br>• Memory wiped on beforeunload + 10min timer<br>• To go ultra secure, self-host pdf.min.js and mammoth instead of cdnjs</p></div>
-<div class="ad-slot isolated small" style="margin-top:12px">Ad Slot - Isolated from sensitive area (AdSense loads here after wipe)<br><ins class="ads-disabled-for-privacy" style="display:block" data-ad-client="ca-pub-XXXXXXXXXXXX" data-ad-slot="1234567890" data-ad-format="auto"></ins></div>
-<div class="card" style="margin-top:16px;background:#f0fdf4;border-color:#bbf7d0"><b>🔒 Privacy Mode: No Ads on This Page</b><p class="small">This tool page has zero AdSense / Analytics tracking to protect your sensitive file. Ads only exist on homepage. Your file never leaves device.</p></div><div class="footer">Aptumi • Private Tools • Type AptumiSecurity.verify() in console to audit</div>
-</div>
-<script src="/js/common.js"></script><script src="/js/ads.js"></script>
-<script src="/js/paraphraser.js"></script>
-</body></html>
+document.getElementById('paraphraseBtn')?.addEventListener('click', ()=>{
+  const out = paraphraseOffline(input.value);
+  document.getElementById('result').innerText = out;
+});
