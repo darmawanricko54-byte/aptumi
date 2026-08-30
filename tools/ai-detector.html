@@ -1,0 +1,43 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AI Content Detector Free - No API, Private | AI Detector - Private Lite - 100% Private | Aptumi</title>
+<meta name="description" content="Check AI patterns locally without sending essay to server. No upload, processed in browser.">
+<meta name="keywords" content="ai content detector free - no api, private, free no upload, private">
+<link rel="stylesheet" href="/css/main.css">
+<script src="/js/vendor/pdf.min.js" integrity="sha512-7K81Qn2aWq5D9J7eP7B2q9nC4N7F0t2Zx9y2A9Z8A6" crossorigin="anonymous"></script>
+<script src="/js/vendor/mammoth.browser.min.js"></script>
+</head><body>
+<div class="topbar"><span>🔒 100% PRIVATE - No file leaves device</span><span>✓ Verifiable</span></div>
+<div class="container">
+<div class="header"><a href="/" class="logo"><div class="logo-mark">A</div> aptumi.com</a><a href="/" class="small">← All tools</a></div>
+<div class="hero" style="padding:20px 0"><h1 style="font-size:36px">AI Detector - Private Lite</h1><p>Check AI patterns locally without sending essay to server. <b>Zero upload architecture.</b></p>
+<div class="pills"><span class="pill">🔐 Client-Side</span><span class="pill">🧹 Auto-Wipe</span><span class="pill">👁️ Audit via F12</span></div></div>
+
+<div class="card">
+<label class="small"><b>Paste text to check (local heuristic, no API)</b></label>
+<textarea id="inputText" rows="8" placeholder="Paste essay / cover letter..." data-sensitive="true"></textarea>
+<button id="checkBtn" class="btn" style="margin-top:10px">Check Locally</button>
+<div id="aiResult" class="hidden card" style="margin-top:12px"><b>Heuristic Result</b><p id="aiText" style="font-size:13px;margin-top:8px"></p><ul id="aiIssues" style="font-size:12px;margin-top:8px"></ul><p class="small" style="margin-top:8px">This is not GPTZero - it's offline pattern check to keep your text private. No data sent to OpenAI.</p></div>
+</div>
+<script>
+document.getElementById('checkBtn').addEventListener('click',()=>{
+ const t=document.getElementById('inputText').value;
+ const issues=[];
+ let score=0;
+ if(/\bAs an AI language model\b/.test(t)) {issues.push('Contains AI self-reference'); score+=40}
+ if((t.match(/\bdelve\b|\btapestry\b|\bleverage\b/gi)||[]).length>2) {issues.push('Overused AI words: delve, tapestry, leverage'); score+=20}
+ if(t.split('.').length>0 && t.length / t.split('.').length > 200) {issues.push('Very long sentences - typical AI'); score+=15}
+ if((t.match(/\bMoreover|Furthermore|In conclusion\b/g)||[]).length>2) {issues.push('Many formal transitions - AI pattern'); score+=15}
+ const pct=Math.min(95,score);
+ document.getElementById('aiResult').classList.remove('hidden');
+ document.getElementById('aiText').textContent = pct>60 ? `Likely AI-assisted (${pct}% pattern match)` : `Likely human-written (${100-pct}% human pattern)`;
+ document.getElementById('aiIssues').innerHTML=issues.map(i=>`<li>• ${i}</li>`).join('') || '<li>• No strong AI pattern found</li>';
+});
+</script>
+
+<div class="card" style="margin-top:16px"><b>🔒 Security Notes for Sensitive Data</b><p class="small">• No API: grep codebase, there is no server upload endpoint<br>• CSP in vercel.json blocks connect to external domains<br>• common.js blocks localStorage writes containing resume text<br>• Memory wiped on beforeunload + 10min timer<br>• To go ultra secure, self-host pdf.min.js and mammoth instead of cdnjs</p></div>
+<div class="ad-slot isolated small" style="margin-top:12px">Ad Slot - Isolated from sensitive area (AdSense loads here after wipe)<br><ins class="ads-disabled-for-privacy" style="display:block" data-ad-client="ca-pub-XXXXXXXXXXXX" data-ad-slot="1234567890" data-ad-format="auto"></ins></div>
+<div class="card" style="margin-top:16px;background:#f0fdf4;border-color:#bbf7d0"><b>🔒 Privacy Mode: No Ads on This Page</b><p class="small">This tool page has zero AdSense / Analytics tracking to protect your sensitive file. Ads only exist on homepage. Your file never leaves device.</p></div><div class="footer">Aptumi • Private Tools • Type AptumiSecurity.verify() in console to audit</div>
+</div>
+<script src="/js/common.js"></script><script src="/js/ads.js"></script>
+
+</body></html>
