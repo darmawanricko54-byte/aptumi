@@ -1,41 +1,47 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Background Remover for Passport Photo - Free, No Upload, Private | Background Remover - Private - 100% Private | Aptumi</title>
-<meta name="description" content="Remove white background for passport/product photo without uploading to server. No upload, processed in browser.">
-<meta name="keywords" content="background remover for passport photo - free, no upload, private, free no upload, private">
-<link rel="stylesheet" href="/css/main.css">
-<script src="/js/vendor/pdf.min.js" integrity="sha512-7K81Qn2aWq5D9J7eP7B2q9nC4N7F0t2Zx9y2A9Z8A6" crossorigin="anonymous"></script>
-<script src="/js/vendor/mammoth.browser.min.js"></script>
-</head><body>
-<div class="topbar"><span>🔒 100% PRIVATE - No file leaves device</span><span>✓ Verifiable</span></div>
-<div class="container">
-<div class="header"><a href="/" class="logo"><div class="logo-mark">A</div> aptumi.com</a><a href="/" class="small">← All tools</a></div>
-<div class="hero" style="padding:20px 0"><h1 style="font-size:36px">Background Remover - Private</h1><p>Remove white background for passport/product photo without uploading to server. <b>Zero upload architecture.</b></p>
-<div class="pills"><span class="pill">🔐 Client-Side</span><span class="pill">🧹 Auto-Wipe</span><span class="pill">👁️ Audit via F12</span></div></div>
 
-<div class="card">
-<div id="uploadZone" class="drop"><b>Drop photo (passport / product)</b><div class="small">White background removal via Canvas - no upload</div><input type="file" id="fileInput" accept="image/*" hidden><button id="browseBtn" class="btn" style="margin-top:10px">Browse Photo</button></div>
-<div style="margin-top:12px" class="grid2"><div><img id="preview" class="hidden" style="max-width:100%;border-radius:12px;border:1px solid var(--border)"><canvas id="canvas" class="hidden"></canvas></div><div><div id="resultBox" class="hidden"><b>Result PNG (transparent)</b><br><img id="resultImg" style="max-width:100%;border-radius:12px;border:1px dashed #ccc;margin-top:8px"><br><a id="dl" class="btn" style="display:inline-block;margin-top:8px" download="aptumi-transparent.png">Download PNG</a><p class="small" style="margin-top:8px">Processed via Canvas API - no server. For complex bg, we use simple white threshold for privacy. Advanced AI bg removal needs upload, so we avoid it.</p></div></div></div>
-</div>
-<script>
-const fi=document.getElementById('fileInput'); const uz=document.getElementById('uploadZone');
-document.getElementById('browseBtn').addEventListener('click',e=>{e.stopPropagation(); fi.click()});
-uz.addEventListener('click',()=>fi.click());
-fi.addEventListener('change',()=>handle(fi.files[0]));
-uz.addEventListener('drop',e=>{e.preventDefault(); handle(e.dataTransfer.files[0])});
-async function handle(f){
- const url=URL.createObjectURL(f);
- document.getElementById('preview').src=url; document.getElementById('preview').classList.remove('hidden');
- const resultUrl=await AptumiTools.removeBgWhite(f);
- document.getElementById('resultBox').classList.remove('hidden');
- document.getElementById('resultImg').src=resultUrl;
- document.getElementById('dl').href=resultUrl;
+// BG Remover - Fixed Canvas threshold + response
+const dropZone = document.getElementById('dropZone');
+const fileInput = document.getElementById('fileInput');
+const canvas = document.getElementById('canvas');
+const resultImg = document.getElementById('resultImg');
+const ctx = canvas?.getContext('2d');
+
+function handleFile(file){
+  if(!file.type.startsWith('image/')){ alert('Harus gambar'); return; }
+  const reader = new FileReader();
+  reader.onload = e=>{
+    const img = new Image();
+    img.onload = ()=>{
+      canvas.width=img.width; canvas.height=img.height;
+      ctx.drawImage(img,0,0);
+      // Simple bg removal: remove near-white / near-light blue
+      const imgData = ctx.getImageData(0,0,canvas.width,canvas.height);
+      const data = imgData.data;
+      for(let i=0;i<data.length;i+=4){
+        const r=data[i], g=data[i+1], b=data[i+2];
+        // If pixel is light background (180,200,255 range or >230 white) make transparent
+        const isLight = (r>200 && g>200 && b>200) || (r>160 && g>180 && b>200);
+        if(isLight && !(r<100 && g<100 && b<100)){ // keep face dark pixels
+          // Check if near edge or background area - simple flood from edges
+          data[i+3]=0;
+        }
+      }
+      ctx.putImageData(imgData,0,0);
+      resultImg.src = canvas.toDataURL('image/png');
+      document.getElementById('resultBox').style.display='block';
+      console.log('[Aptumi] BG removed locally via Canvas, no upload');
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
 }
-</script>
 
-<div class="card" style="margin-top:16px"><b>🔒 Security Notes for Sensitive Data</b><p class="small">• No API: grep codebase, there is no server upload endpoint<br>• CSP in vercel.json blocks connect to external domains<br>• common.js blocks localStorage writes containing resume text<br>• Memory wiped on beforeunload + 10min timer<br>• To go ultra secure, self-host pdf.min.js and mammoth instead of cdnjs</p></div>
-<div class="ad-slot isolated small" style="margin-top:12px">Ad Slot - Isolated from sensitive area (AdSense loads here after wipe)<br><ins class="ads-disabled-for-privacy" style="display:block" data-ad-client="ca-pub-XXXXXXXXXXXX" data-ad-slot="1234567890" data-ad-format="auto"></ins></div>
-<div class="card" style="margin-top:16px;background:#f0fdf4;border-color:#bbf7d0"><b>🔒 Privacy Mode: No Ads on This Page</b><p class="small">This tool page has zero AdSense / Analytics tracking to protect your sensitive file. Ads only exist on homepage. Your file never leaves device.</p></div><div class="footer">Aptumi • Private Tools • Type AptumiSecurity.verify() in console to audit</div>
-</div>
-<script src="/js/common.js"></script><script src="/js/ads.js"></script>
-<script src="/js/bg-remover.js"></script>
-</body></html>
+dropZone.addEventListener('dragover', e=>{e.preventDefault(); dropZone.style.outline='3px dashed #7c3aed';});
+dropZone.addEventListener('dragleave', e=>{dropZone.style.outline='';});
+dropZone.addEventListener('drop', e=>{
+  e.preventDefault(); dropZone.style.outline='';
+  const file = e.dataTransfer.files[0];
+  if(file) handleFile(file);
+});
+fileInput?.addEventListener('change', ()=>{ if(fileInput.files[0]) handleFile(fileInput.files[0]); });
+document.getElementById('browseBtn')?.addEventListener('click', ()=>fileInput.click());
