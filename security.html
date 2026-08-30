@@ -1,0 +1,21 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Security - Aptumi</title><link rel="stylesheet" href="/css/main.css"></head><body>
+<div class="container"><div class="header"><a href="/" class="logo"><div class="logo-mark">A</div> aptumi.com</a></div>
+<div class="card" style="max-width:720px;margin:30px auto">
+<h1>Security - How We Protect Sensitive Data</h1>
+<div style="font-size:13px;line-height:1.7;margin-top:12px">
+<p><b>Threat Model:</b> Resume contains PII (email, phone, address, NIK). Most checkers upload to S3/server = leak risk + AdSense crawler risk.</p>
+<p><b>Our Architecture:</b></p>
+<ul>
+<li>• <b>No /api/upload endpoint exists</b> - grep codebase, you won't find it. File parsing via PDF.js & Mammoth.js in browser memory only.</li>
+<li>• <b>AdSense only on homepage</b> - /tools/* pages have Content-Security-Policy: connect-src 'self' only, no google ads domain allowed, plus no-store cache. So even if AdSense tried to exfiltrate, browser blocks.</li>
+<li>• <b>Self-hosted vendors</b> in /js/vendor/ - no CDN call to cdnjs that could be hijacked.</li>
+<li>• <b>Storage blocking</b> - common.js overrides localStorage.setItem, blocks any key containing resume/email/phone with long value.</li>
+<li>• <b>Auto wipe</b> - beforeunload + 10min inactivity + manual Wipe button.</li>
+<li>• <b>Verifiable</b> - Open DevTools > Network > upload file > see 0 POST. Run AptumiSecurity.verify() in console. Check Application > Local Storage = empty.</li>
+</ul>
+<p><b>Audit Steps for You:</b><br>1. F12 > Network, 2. Upload resume, 3. Filter Doc/XHR - 0 requests, 4. Application > Storage - empty, 5. View Source - no api/upload</p>
+<p><b>Responsible Disclosure:</b> Found a leak? Email hello@aptumi.com - we pay bounty for valid PII leak.</p>
+</div>
+</div></div>
+<script src="/js/common.js"></script>
+</body></html>
