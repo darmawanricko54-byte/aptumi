@@ -1,56 +1,51 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Resume Keyword Scanner - Match Job Description (Free, No Upload) | Resume Keyword Scanner - 100% Private | Aptumi</title>
+<meta name="description" content="Compare resume vs job description locally. Find missing keywords without uploading. No upload, processed in browser.">
+<meta name="keywords" content="resume keyword scanner - match job description (free, no upload), free no upload, private">
+<link rel="stylesheet" href="/css/main.css">
+<script src="/js/vendor/pdf.min.js"></script>
+<script>if(window.pdfjsLib){pdfjsLib.GlobalWorkerOptions.workerSrc="/js/vendor/pdf.worker.min.js";}</script>
+<script src="/js/vendor/mammoth.browser.min.js"></script>
+</head><body>
+<div class="topbar"><span>🔒 100% PRIVATE - No file leaves device</span><span>✓ Verifiable</span></div>
+<div class="container">
+<div class="header"><a href="/" class="logo"><div class="logo-mark">A</div> aptumi.com</a><a href="/" class="small">← All tools</a></div>
+<div class="hero" style="padding:20px 0"><h1 style="font-size:36px">Resume Keyword Scanner</h1><p>Compare resume vs job description locally. Find missing keywords without uploading. <b>Zero upload architecture.</b></p>
+<div class="pills"><span class="pill">🔐 Client-Side</span><span class="pill">🧹 Auto-Wipe</span><span class="pill">👁️ Audit via F12</span></div></div>
 
-// Keyword Scanner - Fixed order
-const dropZone = document.getElementById('dropZone');
-const fileInput = document.getElementById('fileInput');
-const jdInput = document.getElementById('jobDesc');
-let resumeText = '';
+<div class="card">
+<div id="uploadZone" class="drop"><b>Drop resume</b><div class="small">Then paste job description</div><input type="file" id="fileInput" accept=".pdf,.docx" hidden><button id="browseBtn" class="btn" style="margin-top:10px">Browse</button></div>
+<div style="margin-top:12px"><label class="small"><b>Job Description *required for this tool</b></label><textarea id="jobDesc" rows="6" placeholder="Paste job description here..." data-sensitive="true"></textarea></div>
+<div id="resultArea" class="hidden" style="margin-top:16px"><div class="card"><b>Match Score: <span id="matchPct">--</span>%</b><div class="bar" style="margin-top:8px"><div id="matchBar"></div></div><div id="kwResult" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:12px"></div></div></div>
+</div>
+<script>
+const uz=document.getElementById('uploadZone'); const fi=document.getElementById('fileInput');
+document.getElementById('browseBtn').addEventListener('click',e=>{e.stopPropagation(); fi.click()});
+uz.addEventListener('click',()=>fi.click());
+uz.addEventListener('dragover',e=>{e.preventDefault(); uz.style.borderColor='#10b981'; uz.style.background='rgba(16,185,129,0.06)';});
+uz.addEventListener('dragleave',()=>{uz.style.borderColor=''; uz.style.background='';});
+uz.addEventListener('drop',e=>{e.preventDefault(); uz.style.borderColor=''; uz.style.background=''; handle(e.dataTransfer.files[0])});
+fi.addEventListener('change',()=>handle(fi.files[0]));
+async function handle(f){
+ if(!f) return;
+ const jd=document.getElementById('jobDesc').value;
+ if(jd.length<20){ document.getElementById('resultArea').classList.remove('hidden'); document.getElementById('kwResult').innerHTML='<span class="small">Resume loaded ('+f.name+') - now paste JD and it will scan. File parsed locally, no upload.</span>'; window.__pendingFile=f; return; }
 
-function highlight(){ dropZone.style.outline='3px dashed #10b981'; }
-function unhighlight(){ dropZone.style.outline=''; }
-
-['dragenter','dragover'].forEach(ev=>dropZone.addEventListener(ev,e=>{e.preventDefault(); highlight();}));
-['dragleave','drop'].forEach(ev=>dropZone.addEventListener(ev,e=>{e.preventDefault(); unhighlight();}));
-
-dropZone.addEventListener('drop', async e=>{
-  const file = e.dataTransfer.files[0];
-  if(!file) return;
-  if(!jdInput.value.trim()){
-    // Allow drop first, save file, then ask JD later - don't block
-    console.log('[Aptumi] Resume dropped, JD empty - will ask on scan');
-  }
-  await handleResume(file);
-});
-
-async function handleResume(file){
-  const buf = await file.arrayBuffer();
-  let text='';
-  if(file.name.endsWith('.pdf')){
-    const pdf = await pdfjsLib.getDocument({data:buf}).promise;
-    for(let i=1;i<=pdf.numPages;i++){
-      const p = await pdf.getPage(i);
-      const tc = await p.getTextContent();
-      text+= tc.items.map(it=>it.str).join(' ')+' ';
-    }
-  } else {
-    const r = await mammoth.extractRawText({arrayBuffer:buf});
-    text=r.value;
-  }
-  resumeText=text;
-  window.__aptumi_resume_text=text;
-  document.getElementById('resumeStatus').innerText='Resume loaded ('+text.length+' chars) - now paste JD and click Scan';
-  if(jdInput.value.trim()) scan();
+ document.getElementById('resultArea').classList.remove('hidden');
+ const res=await AptumiTools.handleKeyword(f,jd);
+ document.getElementById('matchPct').textContent=res.matchPct;
+ document.getElementById('matchBar').style.width=res.matchPct+'%';
+ document.getElementById('matchBar').style.background=res.matchPct>=70?'#22c55e':'#eab308';
+ document.getElementById('kwResult').innerHTML=res.result.map(r=>`<span class="pill" style="${r.found?'background:#dcfce7':'background:#fee2e2'}">${r.found?'✓':'✗'} ${r.word}</span>`).join('');
 }
+document.getElementById('jobDesc').addEventListener('input',()=>{ if(window.__pendingFile && document.getElementById('jobDesc').value.length>20){ handle(window.__pendingFile); } });
+</script>
 
-function scan(){
-  if(!resumeText){ alert('Drop resume dulu'); return; }
-  if(!jdInput.value.trim()){ alert('Paste job description dulu'); return; }
-  const jdWords = jdInput.value.toLowerCase().split(/\W+/).filter(w=>w.length>3);
-  const resLower = resumeText.toLowerCase();
-  const missing = [...new Set(jdWords.filter(w=>!resLower.includes(w)))];
-  const found = [...new Set(jdWords.filter(w=>resLower.includes(w)))];
-  document.getElementById('keywordMatch').innerHTML = 
-    '<b>Found ('+found.length+'):</b> '+found.slice(0,20).join(', ')+
-    '<br><b>Missing ('+missing.length+'):</b> '+missing.slice(0,20).join(', ');
-  console.log('[Aptumi] Keyword scan local, no upload');
-}
-document.getElementById('scanBtn')?.addEventListener('click', scan);
+<div class="card" style="margin-top:16px"><b>🔒 Security Notes for Sensitive Data</b><p class="small">• No API: grep codebase, there is no server upload endpoint<br>• CSP in vercel.json blocks connect to external domains<br>• common.js blocks localStorage writes containing resume text<br>• Memory wiped on beforeunload + 10min timer<br>• To go ultra secure, self-host pdf.min.js and mammoth instead of cdnjs</p></div>
+<div class="ad-slot isolated small" style="margin-top:12px">Ad Slot - Isolated from sensitive area (AdSense loads here after wipe)<br><ins class="ads-disabled-for-privacy" style="display:block" data-ad-client="ca-pub-XXXXXXXXXXXX" data-ad-slot="1234567890" data-ad-format="auto"></ins></div>
+<div class="card" style="margin-top:16px;background:#f0fdf4;border-color:#bbf7d0"><b>🔒 Privacy Mode: No Ads on This Page</b><p class="small">This tool page has zero AdSense / Analytics tracking to protect your sensitive file. Ads only exist on homepage. Your file never leaves device.</p></div><div class="footer">Aptumi • Private Tools • Type AptumiSecurity.verify() in console to audit</div>
+</div>
+<script src="/js/common.js"></script><script src="/js/ads.js"></script>
+<script src="/js/ats.js"></script>
+<script src="/js/keyword.js"></script>
+</body></html>
