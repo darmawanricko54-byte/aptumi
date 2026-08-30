@@ -1,83 +1,51 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AI Content Detector Free - No API, Private | AI Detector - Private Lite - 100% Private | Aptumi</title>
+<meta name="description" content="Check AI patterns locally without sending essay to server. No upload, processed in browser.">
+<meta name="keywords" content="ai content detector free - no api, private, free no upload, private">
+<link rel="stylesheet" href="/css/main.css">
+<script src="/js/vendor/pdf.min.js"></script>
+<script>if(window.pdfjsLib){pdfjsLib.GlobalWorkerOptions.workerSrc="/js/vendor/pdf.worker.min.js";}</script>
+<script src="/js/vendor/mammoth.browser.min.js"></script>
+</head><body>
+<div class="topbar"><span>🔒 100% PRIVATE - No file leaves device</span><span>✓ Verifiable</span></div>
+<div class="container">
+<div class="header"><a href="/" class="logo"><div class="logo-mark">A</div> aptumi.com</a><a href="/" class="small">← All tools</a></div>
+<div class="hero" style="padding:20px 0"><h1 style="font-size:36px">AI Detector - Private Lite</h1><p>Check AI patterns locally without sending essay to server. <b>Zero upload architecture.</b></p>
+<div class="pills"><span class="pill">🔐 Client-Side</span><span class="pill">🧹 Auto-Wipe</span><span class="pill">👁️ Audit via F12</span></div></div>
 
-// AI Detector Lite - Fixed allow drop + paste
-const input = document.getElementById('inputText') || document.getElementById('essay');
-const dropZone = document.getElementById('dropZone') || input;
-const fileInput = document.getElementById('fileInput');
-const resultDiv = document.getElementById('heuristicResult') || document.getElementById('result');
+<div class="card">
+<label class="small"><b>Paste text to check (local heuristic, no API)</b></label>
+<div id="aiDrop" style="border:2px dashed #c4b5fd;border-radius:12px;padding:12px;text-align:center;margin-top:10px;cursor:pointer"><b>Or drop essay PDF/DOCX here</b><div class="small">Parsed locally • No upload</div><input type="file" id="aiFile" accept=".pdf,.docx,.txt" hidden></div>
+<textarea id="inputText" rows="8" placeholder="Paste essay / cover letter..." data-sensitive="true" style="margin-top:10px"></textarea>
+<button id="checkBtn" class="btn" style="margin-top:10px">Check Locally</button>
+<div id="aiResult" class="hidden card" style="margin-top:12px"><b>Heuristic Result</b><p id="aiText" style="font-size:13px;margin-top:8px"></p><ul id="aiIssues" style="font-size:12px;margin-top:8px"></ul><p class="small" style="margin-top:8px">This is not GPTZero - it's offline pattern check to keep your text private. No data sent to OpenAI.</p></div>
+</div>
+<script>
+const aiDrop=document.getElementById('aiDrop'); const aiFile=document.getElementById('aiFile');
+aiDrop.addEventListener('click',()=>aiFile.click());
+aiDrop.addEventListener('dragover',e=>{e.preventDefault(); aiDrop.style.borderColor='#7c3aed'; aiDrop.style.background='rgba(124,58,237,0.06)';});
+aiDrop.addEventListener('dragleave',()=>{aiDrop.style.borderColor=''; aiDrop.style.background='';});
+aiDrop.addEventListener('drop',async e=>{e.preventDefault(); aiDrop.style.borderColor=''; aiDrop.style.background=''; const f=e.dataTransfer.files[0]; if(!f) return; const buf=await f.arrayBuffer(); let t=''; if(f.name.endsWith('.pdf')){const pdf=await pdfjsLib.getDocument({data:buf}).promise; for(let i=1;i<=pdf.numPages;i++){const p=await pdf.getPage(i); const tc=await p.getTextContent(); t+=tc.items.map(x=>x.str).join(' ')+' ';} } else if(f.name.endsWith('.docx')){const r=await mammoth.extractRawText({arrayBuffer:buf}); t=r.value;} else {t=await f.text();} document.getElementById('inputText').value=t; });
+aiFile.addEventListener('change',async ()=>{const f=aiFile.files[0]; if(!f) return; const buf=await f.arrayBuffer(); let t=''; if(f.name.endsWith('.pdf')){const pdf=await pdfjsLib.getDocument({data:buf}).promise; for(let i=1;i<=pdf.numPages;i++){const p=await pdf.getPage(i); const tc=await p.getTextContent(); t+=tc.items.map(x=>x.str).join(' ')+' ';} } else if(f.name.endsWith('.docx')){const r=await mammoth.extractRawText({arrayBuffer:buf}); t=r.value;} else {t=await f.text();} document.getElementById('inputText').value=t; });
+document.getElementById('checkBtn').addEventListener('click',()=>{
+ const t=document.getElementById('inputText').value;
+ const issues=[];
+ let score=0;
+ if(/\bAs an AI language model\b/.test(t)) {issues.push('Contains AI self-reference'); score+=40}
+ if((t.match(/\bdelve\b|\btapestry\b|\bleverage\b/gi)||[]).length>2) {issues.push('Overused AI words: delve, tapestry, leverage'); score+=20}
+ if(t.split('.').length>0 && t.length / t.split('.').length > 200) {issues.push('Very long sentences - typical AI'); score+=15}
+ if((t.match(/\bMoreover|Furthermore|In conclusion\b/g)||[]).length>2) {issues.push('Many formal transitions - AI pattern'); score+=15}
+ const pct=Math.min(95,score);
+ document.getElementById('aiResult').classList.remove('hidden');
+ document.getElementById('aiText').textContent = pct>60 ? `Likely AI-assisted (${pct}% pattern match)` : `Likely human-written (${100-pct}% human pattern)`;
+ document.getElementById('aiIssues').innerHTML=issues.map(i=>`<li>• ${i}</li>`).join('') || '<li>• No strong AI pattern found</li>';
+});
+</script>
 
-function heuristicCheck(text){
-  const t = text.toLowerCase();
-  let aiScore = 0;
-  const patterns = [
-    /as an ai language model/i,
-    /in conclusion,.*overall/i,
-    /delve into/i,
-    /moreover|furthermore|additionally/i,
-    /it is important to note/i,
-    /in today's rapidly evolving world/i
-  ];
-  let found = [];
-  patterns.forEach(p=>{ if(p.test(text)){ aiScore+=15; found.push(p.source); } });
-  // Repetitive sentence length = AI pattern
-  const sentences = text.split(/[.!?]+/).filter(s=>s.trim().length>10);
-  const avgLen = sentences.reduce((a,s)=>a+s.split(/\s+/).length,0)/ (sentences.length||1);
-  if(avgLen>22 && avgLen<28) aiScore+=20;
-  
-  const humanPct = Math.max(5, 100 - aiScore);
-  return {humanPct, found, textLen: text.length};
-}
+<div class="card" style="margin-top:16px"><b>🔒 Security Notes for Sensitive Data</b><p class="small">• No API: grep codebase, there is no server upload endpoint<br>• CSP in vercel.json blocks connect to external domains<br>• common.js blocks localStorage writes containing resume text<br>• Memory wiped on beforeunload + 10min timer<br>• To go ultra secure, self-host pdf.min.js and mammoth instead of cdnjs</p></div>
+<div class="ad-slot isolated small" style="margin-top:12px">Ad Slot - Isolated from sensitive area (AdSense loads here after wipe)<br><ins class="ads-disabled-for-privacy" style="display:block" data-ad-client="ca-pub-XXXXXXXXXXXX" data-ad-slot="1234567890" data-ad-format="auto"></ins></div>
+<div class="card" style="margin-top:16px;background:#f0fdf4;border-color:#bbf7d0"><b>🔒 Privacy Mode: No Ads on This Page</b><p class="small">This tool page has zero AdSense / Analytics tracking to protect your sensitive file. Ads only exist on homepage. Your file never leaves device.</p></div><div class="footer">Aptumi • Private Tools • Type AptumiSecurity.verify() in console to audit</div>
+</div>
+<script src="/js/common.js"></script><script src="/js/ads.js"></script>
 
-// Allow drop PDF/DOCX/TXT into detector
-function setupDrop(){
-  if(!dropZone) return;
-  ['dragenter','dragover'].forEach(ev=>{
-    dropZone.addEventListener(ev, e=>{ e.preventDefault(); dropZone.style.outline='3px dashed #8b5cf6'; dropZone.style.background='rgba(139,92,246,0.06)'; });
-  });
-  ['dragleave','drop'].forEach(ev=>{
-    dropZone.addEventListener(ev, e=>{ e.preventDefault(); dropZone.style.outline=''; dropZone.style.background=''; });
-  });
-  dropZone.addEventListener('drop', async e=>{
-    e.preventDefault();
-    const file = e.dataTransfer.files[0];
-    if(!file) return;
-    await handleFile(file);
-  });
-}
-
-async function handleFile(file){
-  const buf = await file.arrayBuffer();
-  let txt='';
-  try{
-    if(file.name.endsWith('.pdf')){
-      const pdf = await pdfjsLib.getDocument({data:buf}).promise;
-      for(let i=1;i<=pdf.numPages;i++){ const p=await pdf.getPage(i); const tc=await p.getTextContent(); txt+=tc.items.map(it=>it.str).join(' ')+' '; }
-    } else if(file.name.endsWith('.docx')){
-      const r = await mammoth.extractRawText({arrayBuffer:buf}); txt=r.value;
-    } else {
-      txt = await file.text();
-    }
-    if(input) input.value = txt;
-    console.log('[Aptumi] AI Detector - parsed locally, no upload, len', txt.length);
-    runCheck();
-  }catch(err){ alert('Gagal parse: '+err.message); }
-}
-
-function runCheck(){
-  const text = (input?.value||'').trim();
-  if(!text){ alert('Paste atau drop essay dulu'); return; }
-  if(text.length<50){ alert('Text terlalu pendek, min 50 char'); return; }
-  const res = heuristicCheck(text);
-  if(resultDiv){
-    resultDiv.innerHTML = '<b>Likely '+(res.humanPct>60?'human-written':'AI-like')+' ('+res.humanPct+'% human pattern)</b><br>' +
-      '• No strong AI pattern found: '+(res.found.length? res.found.join(', ') : 'clean') +
-      '<br><small>Length: '+res.textLen+' chars - This is offline heuristic, not GPTZero, no data sent</small>';
-  }
-}
-
-document.getElementById('checkBtn')?.addEventListener('click', runCheck);
-if(fileInput){
-  document.getElementById('browseBtn')?.addEventListener('click', ()=>fileInput.click());
-  fileInput.addEventListener('change', ()=>{ if(fileInput.files[0]) handleFile(fileInput.files[0]); });
-}
-setupDrop();
-console.log('[Aptumi] AI Detector Lite fixed - drop enabled');
+</body></html>
