@@ -1,61 +1,71 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Free ATS Resume Checker - No Upload Required (Private & Safe) | ATS Resume Checker - 100% Private | Aptumi</title>
-<meta name="description" content="Check if your resume passes ATS robots. Free, no signup, file never leaves device. No upload, processed in browser.">
-<meta name="keywords" content="free ats resume checker - no upload required (private & safe), free no upload, private">
-<link rel="stylesheet" href="/css/main.css">
-<script src="/js/vendor/pdf.min.js" integrity="sha512-7K81Qn2aWq5D9J7eP7B2q9nC4N7F0t2Zx9y2A9Z8A6" crossorigin="anonymous"></script>
-<script src="/js/vendor/mammoth.browser.min.js"></script>
-</head><body>
-<div class="topbar"><span>🔒 100% PRIVATE - No file leaves device</span><span>✓ Verifiable</span></div>
-<div class="container">
-<div class="header"><a href="/" class="logo"><div class="logo-mark">A</div> aptumi.com</a><a href="/" class="small">← All tools</a></div>
-<div class="hero" style="padding:20px 0"><h1 style="font-size:36px">ATS Resume Checker</h1><p>Check if your resume passes ATS robots. Free, no signup, file never leaves device. <b>Zero upload architecture.</b></p>
-<div class="pills"><span class="pill">🔐 Client-Side</span><span class="pill">🧹 Auto-Wipe</span><span class="pill">👁️ Audit via F12</span></div></div>
 
-<div class="card">
-<div id="uploadZone" class="drop"><div style="font-size:28px">↑</div><b>Drop resume PDF/DOCX</b><div class="small">Max 5MB • Parsed locally • No upload</div><input type="file" id="fileInput" accept=".pdf,.docx" hidden><button id="browseBtn" class="btn" style="margin-top:12px">Browse - Private</button></div>
-<div class="grid2" style="margin-top:16px"><div><label class="small"><b>Job Description (optional)</b></label><textarea id="jobDesc" rows="4" placeholder="Paste vacancy..." data-sensitive="true"></textarea></div><div class="secure-box"><b>How to prove privacy:</b><br><span class="small">Open DevTools > Network, upload file, see 0 POST. Console shows [Aptumi] logs.</span></div></div>
-<div id="resultArea" class="hidden" style="margin-top:18px;border-top:1px solid var(--border);padding-top:18px">
-<div style="display:flex;justify-content:space-between"><b>Result</b><span id="fileName" class="pill"></span></div>
-<div class="grid3" style="margin-top:12px"><div class="card" style="background:var(--black);color:#fff;text-align:center"><div class="small" style="color:#a1a1aa">ATS SCORE</div><div id="score" class="score">--</div><div id="scoreLabel" class="small" style="color:#a1a1aa"></div><div class="bar" style="margin-top:10px;background:rgba(255,255,255,.15)"><div id="scoreBar"></div></div></div><div class="card" style="grid-column: span 2"><b>Fixes</b><ul id="issues" style="font-size:13px;margin-top:8px"></ul></div></div>
-<div id="keywordBox" class="hidden card" style="margin-top:12px"><b>Keyword Match</b><div id="keywords" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px"></div></div>
-<div style="margin-top:12px;display:flex;gap:8px"><button onclick="location.reload()" class="btn-ghost btn">Check Another</button><button onclick="AptumiSecurity.wipe();alert('Memory wiped - reload to clear')" class="btn">Wipe Memory Now</button></div>
-</div>
-</div>
-<script>
-const uz=document.getElementById('uploadZone'); const fi=document.getElementById('fileInput');
-document.getElementById('browseBtn').addEventListener('click',e=>{e.stopPropagation(); fi.click()});
-uz.addEventListener('click',()=>fi.click());
-uz.addEventListener('dragover',e=>{e.preventDefault(); uz.style.borderColor='black'});
-uz.addEventListener('dragleave',()=>uz.style.borderColor='');
-uz.addEventListener('drop',e=>{e.preventDefault(); handle(e.dataTransfer.files[0])});
-fi.addEventListener('change',()=>handle(fi.files[0]));
-async function handle(f){
- if(!f) return;
- document.getElementById('fileName').textContent=f.name;
- document.getElementById('resultArea').classList.remove('hidden');
- const jd=document.getElementById('jobDesc').value;
- const res=await AptumiTools.handleATS(f,jd);
- document.getElementById('score').textContent=res.score;
- document.getElementById('scoreBar').style.width=res.score+'%';
- document.getElementById('scoreBar').style.background=res.score>=80?'#22c55e':res.score>=60?'#eab308':'#ef4444';
- document.getElementById('scoreLabel').textContent=res.score>=80?'Pass likely':res.score>=60?'Fix 1-2 issues':'High risk';
- document.getElementById('issues').innerHTML=res.issues.map(i=>`<li>${i}</li>`).join('');
- if(jd.length>20){
-   document.getElementById('keywordBox').classList.remove('hidden');
-   const jobWords=[...new Set(jd.toLowerCase().match(/\b[a-z]{4,}\b/g)||[])].slice(0,30);
-   document.getElementById('keywords').innerHTML=jobWords.map(w=>{
-     const found=res.lower.includes(w);
-     return `<span class="pill" style="${found?'background:#dcfce7':'background:#fee2e2'}">${found?'✓':'✗'} ${w}</span>`;
-   }).join('');
- }
+// ATS Resume Checker - Fixed Drop
+const dropZone = document.getElementById('dropZone') || document.querySelector('.drop-zone') || document.body;
+const fileInput = document.getElementById('fileInput');
+const browseBtn = document.getElementById('browseBtn');
+const jobDescInput = document.getElementById('jobDesc');
+const resultDiv = document.getElementById('result');
+
+function showAlert(msg){ console.log('[Aptumi] '+msg); }
+
+function highlight(){ dropZone.style.outline='3px dashed #7c3aed'; dropZone.style.background='rgba(124,58,237,0.06)'; }
+function unhighlight(){ dropZone.style.outline=''; dropZone.style.background=''; }
+
+['dragenter','dragover'].forEach(ev=>{
+  dropZone.addEventListener(ev, e=>{ e.preventDefault(); e.stopPropagation(); highlight(); });
+});
+['dragleave','drop'].forEach(ev=>{
+  dropZone.addEventListener(ev, e=>{ e.preventDefault(); e.stopPropagation(); unhighlight(); });
+});
+
+dropZone.addEventListener('drop', async (e)=>{
+  const file = e.dataTransfer.files[0];
+  if(!file){ showAlert('No file dropped'); return; }
+  await handleFile(file);
+});
+
+if(browseBtn && fileInput){
+  browseBtn.addEventListener('click', ()=> fileInput.click());
+  fileInput.addEventListener('change', async ()=>{ if(fileInput.files[0]) await handleFile(fileInput.files[0]); });
 }
-</script>
 
-<div class="card" style="margin-top:16px"><b>🔒 Security Notes for Sensitive Data</b><p class="small">• No API: grep codebase, there is no server upload endpoint<br>• CSP in vercel.json blocks connect to external domains<br>• common.js blocks localStorage writes containing resume text<br>• Memory wiped on beforeunload + 10min timer<br>• To go ultra secure, self-host pdf.min.js and mammoth instead of cdnjs</p></div>
-<div class="ad-slot isolated small" style="margin-top:12px">Ad Slot - Isolated from sensitive area (AdSense loads here after wipe)<br><ins class="ads-disabled-for-privacy" style="display:block" data-ad-client="ca-pub-XXXXXXXXXXXX" data-ad-slot="1234567890" data-ad-format="auto"></ins></div>
-<div class="card" style="margin-top:16px;background:#f0fdf4;border-color:#bbf7d0"><b>🔒 Privacy Mode: No Ads on This Page</b><p class="small">This tool page has zero AdSense / Analytics tracking to protect your sensitive file. Ads only exist on homepage. Your file never leaves device.</p></div><div class="footer">Aptumi • Private Tools • Type AptumiSecurity.verify() in console to audit</div>
-</div>
-<script src="/js/common.js"></script><script src="/js/ads.js"></script>
-<script src="/js/ats.js"></script>
-</body></html>
+async function handleFile(file){
+  if(file.size > 5*1024*1024){ alert('Max 5MB'); return; }
+  const buf = await file.arrayBuffer();
+  let text = '';
+  try{
+    if(file.name.endsWith('.pdf')){
+      const pdf = await pdfjsLib.getDocument({data: buf}).promise;
+      for(let i=1;i<=pdf.numPages;i++){
+        const page = await pdf.getPage(i);
+        const tc = await page.getTextContent();
+        text += tc.items.map(it=>it.str).join(' ')+'\n';
+      }
+    } else if(file.name.endsWith('.docx')){
+      const result = await mammoth.extractRawText({arrayBuffer: buf});
+      text = result.value;
+    }
+    if(!text.trim()){ alert('File kosong / tidak terbaca'); return; }
+    window.__aptumi_resume_text = text;
+    console.log('[Aptumi] Parsed locally, no upload. Length:', text.length);
+    scoreATS(text, jobDescInput?.value||'');
+  }catch(err){
+    console.error(err); alert('Gagal parse: '+err.message);
+  }
+}
+
+function scoreATS(resume, jobDesc){
+  let score = 0;
+  const fixes = [];
+  if(/experience|pengalaman/i.test(resume)) score+=25; else fixes.push('Tambah Experience');
+  if(/education|pendidikan|university/i.test(resume)) score+=25; else fixes.push('Tambah Education');
+  if(/@|email/i.test(resume)) score+=15; else fixes.push('Tambah Email');
+  if(resume.length>300) score+=15; else fixes.push('Resume terlalu pendek');
+  if(jobDesc){ 
+    const keywords = jobDesc.toLowerCase().split(/\W+/).filter(w=>w.length>3);
+    const match = keywords.filter(k=>resume.toLowerCase().includes(k)).length;
+    score += Math.min(20, Math.round(match/keywords.length*20));
+  } else { score+=20; }
+  document.getElementById('atsScore').innerText = score+'/100';
+  document.getElementById('fixes').innerText = fixes.join(', ') || 'Good to go!';
+}
